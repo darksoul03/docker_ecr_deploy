@@ -1,0 +1,35 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Fetching Docker file from Repo') {
+            steps {
+                git 'https://github.com/darksoul03/docker_ecr_deploy.git'
+            }
+        }
+        stage('Connecting to AWS ECR') {
+            steps {
+               sh label: '', script: '''sudo chmod 666 /var/run/docker.sock
+                sudo aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 093623478159.dkr.ecr.us-east-1.amazonaws.com
+                '''
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+               sh label: '', script: '''cd /var/lib/jenkins/workspace/ecr_deploy_cli
+                sudo docker build -t cli2 .
+                '''
+            }
+        }
+        
+        stage('Deploy Docker Image to ECR') {
+            steps {
+                sh label: '', script: '''sudo docker tag cli2 093623478159.dkr.ecr.us-east-1.amazonaws.com/holaw:latest
+                sudo docker push 093623478159.dkr.ecr.us-east-1.amazonaws.com/holaw:latest
+                sudo docker rmi cli2 alpine 093623478159.dkr.ecr.us-east-1.amazonaws.com/holaw
+                '''
+            }
+        }
+    }
+}
